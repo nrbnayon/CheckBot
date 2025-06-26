@@ -13,20 +13,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Send, Sparkles, Mail, Lightbulb, Heart, Paperclip, X, CheckCircle } from "lucide-react"
+import { Send, Sparkles, Mail, Lightbulb, Heart, Paperclip, X, CheckCircle, Wifi, WifiOff } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useEffect, useRef, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 
 const quickPrompts = [
-  "Help me draft a professional follow-up email",
-  "How should I respond to this urgent request?",
-  "Suggest ways to organize my inbox better",
-  "Write a polite decline for this meeting request",
-  "Help me prioritize my emails for today",
-  "Draft a thank you email for a client",
-  "Create an email template for common responses",
-  "Help me schedule and send this email at the right time",
+  "What are my most important emails right now?",
+  "Help me draft a reply to my latest email",
+  "Which emails need my immediate attention?",
+  "Summarize my recent emails",
+  "Help me organize my inbox better",
+  "Draft a professional follow-up email",
+  "What emails are from new senders?",
+  "Show me emails that mention deadlines or meetings",
 ]
 
 interface EmailDraft {
@@ -52,6 +52,7 @@ export function EmailAssistantChat() {
   })
   const [attachments, setAttachments] = useState<File[]>([])
   const [isSending, setIsSending] = useState(false)
+  const [hasGmailAccess, setHasGmailAccess] = useState(false)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, setInput, append } = useChat({
     api: "/api/chat",
@@ -59,24 +60,53 @@ export function EmailAssistantChat() {
       {
         id: "welcome",
         role: "assistant",
-        content: `Hey ${user?.name?.split(" ")[0] || "there"}! 👋 I'm **Inbox Buddy**, your personal AI email assistant, and I'm absolutely thrilled to help you conquer your inbox!
+        content: `Hey ${user?.name?.split(" ")[0] || "there"}! 👋 I'm **Inbox Buddy**, your personal AI email assistant with **REAL Gmail access**!
 
-Think of me as your dedicated email sidekick who's here 24/7 to make your email life easier and more efficient. Here's what I can do for you:
+🎯 **What makes me special?** I can actually see and work with your real emails from your Gmail account!
 
-📧 **Smart Email Management** - I'll help you organize, prioritize, and categorize your emails like a pro
-✍️ **Perfect Replies & Drafts** - I can craft responses that hit exactly the right tone and message
-📤 **Send & Schedule Emails** - I can actually send emails for you (with your confirmation, of course!)
-📎 **File Attachments** - I can help you attach documents and files to your emails
-🎯 **Strategic Communication** - Get advice on timing, etiquette, and building better relationships
-⚡ **Productivity Boosts** - Discover workflows, templates, and shortcuts that'll save you hours
-🔍 **Smart Analysis** - I'll spot important patterns and help you stay on top of what matters most
+📧 **Real Email Powers:**
+✅ **Analyze your actual emails** - I can see your real inbox, subjects, senders, and content
+✅ **Smart email insights** - Get personalized advice based on your actual email patterns  
+✅ **Draft contextual replies** - I'll help you respond to specific real emails
+✅ **Prioritize your inbox** - I'll identify which real emails need your attention first
+✅ **Email organization** - Suggestions based on your actual email habits
+✅ **Send emails for you** - Compose and send real emails with attachments
 
-I can even help you send emails with attachments! Just ask me to draft something, and I'll guide you through adding files and scheduling if needed.
+🔍 **Try asking me:**
+- "What are my most important emails right now?"
+- "Help me reply to my latest email"
+- "Which emails need my attention?"
+- "Summarize my recent emails"
 
-What's your biggest email challenge right now? Drowning in unread messages? Need help with a tricky response? Want to completely transform your email workflow? I'm here to help! 🚀`,
+I'm connected to your real Gmail account, so I can give you specific, actionable help with your actual emails. What would you like to know about your inbox? 🚀`,
       },
     ],
+    onError: (error) => {
+      console.error("Chat error:", error)
+      toast({
+        title: "Chat Error",
+        description: "There was an issue with the chat. Please try again.",
+        variant: "destructive",
+      })
+    }
   })
+
+  // Check Gmail access status
+  useEffect(() => {
+    const checkGmailAccess = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (response.ok) {
+          const data = await response.json()
+          setHasGmailAccess(!!data.user)
+        }
+      } catch (error) {
+        setHasGmailAccess(false)
+      }
+    }
+    
+    checkGmailAccess()
+  }, [])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -243,14 +273,41 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Inbox Buddy
               </span>
-              <p className="text-sm text-muted-foreground font-normal">
-                Your AI email assistant • Online and ready to help
+              <p className="text-sm text-muted-foreground font-normal flex items-center gap-2">
+                {hasGmailAccess ? (
+                  <>
+                    <Wifi className="h-3 w-3 text-green-500" />
+                    Connected to your real Gmail • Ready to help
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3 text-red-500" />
+                    Limited access • Sign in for full features
+                  </>
+                )}
               </p>
             </div>
           </CardTitle>
         </CardHeader>
 
         <CardContent className="flex-1 flex flex-col p-0">
+          {/* Gmail Access Status */}
+          {!hasGmailAccess && (
+            <Alert className="m-4 mb-0">
+              <WifiOff className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Limited Access:</strong> Sign in with Google to unlock full email analysis and management features.
+                <Button 
+                  onClick={() => window.location.href = "/api/auth/callback"} 
+                  size="sm" 
+                  className="ml-2"
+                >
+                  Connect Gmail
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
             <div className="space-y-6">
               {messages.map((message, index) => (
@@ -279,7 +336,9 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
                     {message.role === "assistant" && index > 0 && (
                       <div className="flex items-center space-x-1 mt-3 pt-2 border-t border-gray-200">
                         <Sparkles className="h-3 w-3 text-purple-500" />
-                        <span className="text-xs text-gray-500">Powered by Inbox Buddy AI</span>
+                        <span className="text-xs text-gray-500">
+                          {hasGmailAccess ? "Powered by real Gmail data" : "Powered by Inbox Buddy AI"}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -313,7 +372,9 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
                           style={{ animationDelay: "0.2s" }}
                         ></div>
                       </div>
-                      <span className="text-sm text-gray-600">Inbox Buddy is thinking...</span>
+                      <span className="text-sm text-gray-600">
+                        {hasGmailAccess ? "Analyzing your real emails..." : "Inbox Buddy is thinking..."}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -354,7 +415,9 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
             <div className="border-t p-4 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="flex items-center space-x-2 mb-3">
                 <Lightbulb className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium text-gray-700">Quick starts:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {hasGmailAccess ? "Try asking about your real emails:" : "Quick starts:"}
+                </span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {quickPrompts.map((prompt, index) => (
@@ -378,7 +441,7 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
                 <Input
                   value={input}
                   onChange={handleInputChange}
-                  placeholder="Ask Inbox Buddy anything about your emails... I'm here to help! 💌"
+                  placeholder={hasGmailAccess ? "Ask me about your real emails... I can see your actual inbox! 📧" : "Ask Inbox Buddy anything about email management... 💌"}
                   disabled={isLoading}
                   className="pr-20 h-12 text-base border-2 border-gray-200 focus:border-purple-400 rounded-xl"
                 />
@@ -391,7 +454,11 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
-                  <Mail className="h-4 w-4 text-gray-400" />
+                  {hasGmailAccess ? (
+                    <Wifi className="h-4 w-4 text-green-500" title="Connected to Gmail" />
+                  ) : (
+                    <WifiOff className="h-4 w-4 text-gray-400" title="Limited access" />
+                  )}
                 </div>
               </div>
               <Button
@@ -404,11 +471,12 @@ Would you like me to help you troubleshoot this issue, or shall we try a differe
             </form>
             <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
               <span>
-                Press Enter to send • Click 📎 to attach files • Inbox Buddy can send emails with confirmation
+                Press Enter to send • Click 📎 to attach files • 
+                {hasGmailAccess ? " I can access your real emails!" : " Sign in for full email access"}
               </span>
               <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Inbox Buddy is online</span>
+                <div className={`w-2 h-2 rounded-full ${hasGmailAccess ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                <span>{hasGmailAccess ? "Real Gmail connected" : "Limited access"}</span>
               </div>
             </div>
           </div>
