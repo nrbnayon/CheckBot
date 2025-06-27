@@ -9,9 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['googleapis']
-  }
+  // experimental: {
+  //   serverComponentsExternalPackages: ['googleapis']
+  // }
 }
 
 export default nextConfig
