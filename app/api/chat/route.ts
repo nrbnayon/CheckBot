@@ -5,7 +5,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { google } from "googleapis";
 
 const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.NEW_ASSISTANT_GROQ_API_KEY,
 });
 
 export const maxDuration = 30;
